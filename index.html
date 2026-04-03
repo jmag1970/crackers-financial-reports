@@ -4,46 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Dynamic Financial Snapshot - Crackers Cafe</title>
+    <title>Monthly Snapshot - Crackers Cafe</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        .loading-shimmer {
-            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-        }
-        @keyframes shimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen p-4 md:p-8">
 
     <div id="app" class="max-w-7xl mx-auto">
-        <!-- Loading State -->
-        <div id="loading" class="flex flex-col items-center justify-center min-h-[60vh]">
-            <div class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <p class="mt-4 text-slate-500 font-medium italic">Fetching latest figures from Google Drive...</p>
-        </div>
-
-        <!-- Dashboard Content (Hidden until loaded) -->
-        <div id="dashboard" class="hidden">
+        <div id="dashboard">
             <!-- Header -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
-                    <h1 class="text-3xl font-extrabold tracking-tight">Financial Snapshot</h1>
+                    <h1 class="text-3xl font-extrabold tracking-tight">Monthly Snapshot</h1>
                     <p id="reporting-period" class="text-slate-500 font-medium mt-1">Reporting Period: Loading...</p>
                 </div>
                 <div class="flex gap-2 bg-white p-1 rounded-xl shadow-sm border border-slate-200">
-                    <button class="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold">Live Feed</button>
-                    <button onclick="refreshData()" class="px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg text-sm font-semibold transition-colors flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                        Refresh
-                    </button>
+                    <span class="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold">Static Report</span>
                 </div>
             </div>
 
@@ -116,78 +96,31 @@
     </div>
 
     <script>
-        const apiKey = "AIzaSyCDMWZTBomp22LZeLfnmUFO6X-pYxEumrY"; // Environment handles this
-
-        async function fetchLatestData() {
-            const systemPrompt = `You are a financial data extractor. I need the latest sales and guest count figures from two Google Sheets: 
-            1. 'Eastgate Sales and Guest Counts'
-            2. 'Greenfield Sales and Guest Counts'
-            
-            Return ONLY a JSON object with this structure:
-            {
-              "month": "Month Year",
-              "locations": [
-                { 
-                  "name": "Eastgate", 
-                  "currentSales": 0, "prevMoSales": 0, "prevYrSales": 0,
-                  "currentGuests": 0, "prevMoGuests": 0, "prevYrGuests": 0,
-                  "checkAvg": 0, "annual2025": 0,
-                  "salesTrend": [6 months of sales],
-                  "guestTrend": [6 months of guests]
+        // ─── UPDATE THIS OBJECT EACH MONTH ───────────────────────────────────────
+        const reportData = {
+            "month": "March 2026",
+            "locations": [
+                {
+                    "name": "Eastgate",
+                    "currentSales": 141579, "prevMoSales": 126235, "prevYrSales": 152431,
+                    "currentGuests": 6482, "prevMoGuests": 6181, "prevYrGuests": 7836,
+                    "checkAvg": 21.84, "annual2025": 1642595,
+                    "salesTrend": [138000, 141000, 135037, 129000, 126235, 141579],
+                    "guestTrend": [6800, 7100, 6779, 6300, 6181, 6482]
+                },
+                {
+                    "name": "Greenfield",
+                    "currentSales": 192406, "prevMoSales": 176270, "prevYrSales": 212914,
+                    "currentGuests": 10622, "prevMoGuests": 8732, "prevYrGuests": 11137,
+                    "checkAvg": 18.11, "annual2025": 2065043,
+                    "salesTrend": [172000, 175000, 174151, 178000, 176270, 192406],
+                    "guestTrend": [8600, 8900, 8733, 8850, 8732, 10622]
                 }
-              ]
-            }`;
-
-            const userQuery = "Extract the most recent month's data and 6-month historical trends from the Eastgate and Greenfield sales sheets in the Financial Analysis folder.";
-
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: userQuery }] }],
-                        systemInstruction: { parts: [{ text: systemPrompt }] },
-                        generationConfig: { responseMimeType: "application/json" },
-                        tools: [{ google_search: {} }]
-                    })
-                });
-
-                const result = await response.json();
-                return JSON.parse(result.candidates[0].content.parts[0].text);
-            } catch (error) {
-                console.error("Error fetching data:", error);
-                // Fallback to the known Feb 2026 data if API fails or is unavailable
-                return getFallbackData();
-            }
-        }
-
-        function getFallbackData() {
-            return {
-                "month": "February 2026",
-                "locations": [
-                    {
-                        "name": "Eastgate",
-                        "currentSales": 126235, "prevMoSales": 129000, "prevYrSales": 126555,
-                        "currentGuests": 6181, "prevMoGuests": 6300, "prevYrGuests": 6830,
-                        "checkAvg": 20.42, "annual2025": 1642595,
-                        "salesTrend": [132000, 138000, 141000, 135037, 129000, 126235],
-                        "guestTrend": [6500, 6800, 7100, 6779, 6300, 6181]
-                    },
-                    {
-                        "name": "Greenfield",
-                        "currentSales": 176270, "prevMoSales": 178000, "prevYrSales": 180091,
-                        "currentGuests": 8732, "prevMoGuests": 8850, "prevYrGuests": 9842,
-                        "checkAvg": 20.19, "annual2025": 2065043,
-                        "salesTrend": [168000, 172000, 175000, 174151, 178000, 176270],
-                        "guestTrend": [8400, 8600, 8900, 8733, 8850, 8732]
-                    }
-                ]
-            };
-        }
+            ]
+        };
+        // ─────────────────────────────────────────────────────────────────────────
 
         function updateUI(data) {
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('dashboard').classList.remove('hidden');
             document.getElementById('reporting-period').innerText = `Reporting Period: ${data.month}`;
 
             const totalSales = data.locations.reduce((sum, loc) => sum + loc.currentSales, 0);
@@ -208,7 +141,6 @@
                         ${data.locations.map(loc => `<div class="flex justify-between text-xs font-medium"><span class="text-slate-400">${loc.name}:</span> <span class="text-slate-700">$${(loc.currentSales/1000).toFixed(1)}k</span></div>`).join('')}
                     </div>
                 </div>
-                <!-- Total Guests KPI -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                     <div class="flex justify-between items-start mb-2"><div class="p-3 rounded-xl bg-indigo-50 text-indigo-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg></div></div>
                     <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Total Guests</p>
@@ -217,7 +149,6 @@
                         ${data.locations.map(loc => `<div class="flex justify-between text-xs font-medium"><span class="text-slate-400">${loc.name}:</span> <span class="text-slate-700">${loc.currentGuests.toLocaleString()}</span></div>`).join('')}
                     </div>
                 </div>
-                <!-- Annual KPI -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                     <div class="flex justify-between items-start mb-2"><div class="p-3 rounded-xl bg-amber-50 text-amber-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg></div></div>
                     <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">2025 Annual</p>
@@ -283,7 +214,6 @@
                 }
             };
 
-            // Sales Trend
             new Chart(document.getElementById('salesChart'), {
                 type: 'line',
                 data: {
@@ -295,7 +225,6 @@
                 options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, ticks: { callback: v => '$' + v/1000 + 'k' } } } }
             });
 
-            // Guest Trend
             new Chart(document.getElementById('guestChart'), {
                 type: 'line',
                 data: {
@@ -307,7 +236,6 @@
                 options: commonOptions
             });
 
-            // Mix
             new Chart(document.getElementById('mixChart'), {
                 type: 'doughnut',
                 data: {
@@ -325,17 +253,7 @@
             `).join('');
         }
 
-        async function refreshData() {
-            document.getElementById('dashboard').classList.add('hidden');
-            document.getElementById('loading').classList.remove('hidden');
-            const data = await fetchLatestData();
-            updateUI(data);
-        }
-
-        window.onload = async () => {
-            const data = await fetchLatestData();
-            updateUI(data);
-        };
+        window.onload = () => updateUI(reportData);
     </script>
 </body>
 </html>
